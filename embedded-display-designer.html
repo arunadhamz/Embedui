@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmbedUI Designer — Universal Embedded Display Designer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --panel: #161a22;
+    --border: #252a35;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --accent3: #10b981;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --text-muted: #334155;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    height: 48px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo span { color: var(--text); }
+
+  .topbar-sep { width: 1px; height: 24px; background: var(--border); }
+
+  .config-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+
+  select, input[type=number] {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+  }
+  select:hover, select:focus { border-color: var(--accent); }
+
+  label { font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+
+  .btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+  .btn.primary:hover { background: #00b8d9; }
+  .btn.danger { border-color: var(--danger); color: var(--danger); }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* LEFT PANEL — Widgets */
+  .left-panel {
+    width: 200px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+
+  .panel-title {
+    padding: 10px 12px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .widget-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .widget-btn {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 6px;
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s;
+    user-select: none;
+    font-size: 10px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    text-align: center;
+  }
+  .widget-btn:hover { border-color: var(--accent); color: var(--accent); background: #00d4ff11; }
+  .widget-btn svg { width: 22px; height: 22px; }
+
+  /* CANVAS AREA */
+  .canvas-area {
+    flex: 1;
+    background: #0d0f14;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: auto;
+    background-image: radial-gradient(circle, #1a1f2e 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .canvas-wrapper {
+    position: relative;
+    box-shadow: 0 0 0 1px var(--accent), 0 0 40px #00d4ff22;
+  }
+
+  .canvas-label {
+    position: absolute;
+    top: -22px;
+    left: 0;
+    font-size: 10px;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    opacity: 0.7;
+  }
+
+  #displayCanvas {
+    display: block;
+    cursor: crosshair;
+  }
+
+  /* RIGHT PANEL — Properties */
+  .right-panel {
+    width: 220px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+
+  .props-section { padding: 10px; border-bottom: 1px solid var(--border); }
+  .props-label { font-size: 10px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
+
+  .prop-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    gap: 6px;
+  }
+  .prop-row label { font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+  .prop-row input, .prop-row select {
+    flex: 1;
+    min-width: 0;
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+  input[type=color] {
+    padding: 1px 3px;
+    height: 24px;
+    width: 40px;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+  }
+  input[type=range] {
+    flex: 1;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  input[type=text] {
+    flex: 1;
+    padding: 3px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    outline: none;
+  }
+  input[type=text]:focus { border-color: var(--accent); }
+
+  /* LAYERS */
+  .layers-list { padding: 6px 10px; }
+  .layer-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 6px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+    transition: all 0.1s;
+  }
+  .layer-item:hover { background: var(--panel); color: var(--text); }
+  .layer-item.selected { background: #00d4ff15; color: var(--accent); border: 1px solid #00d4ff33; }
+  .layer-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .layer-del { margin-left: auto; opacity: 0; font-size: 12px; color: var(--danger); cursor: pointer; }
+  .layer-item:hover .layer-del { opacity: 1; }
+
+  /* CODE MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: #000a;
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 780px;
+    max-width: 95vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 80px #000;
+  }
+  .modal-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-header h2 { font-size: 14px; font-weight: 700; }
+  .modal-tabs { display: flex; gap: 4px; }
+  .tab-btn {
+    padding: 4px 10px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  .modal-body { flex: 1; overflow: auto; padding: 0; }
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    padding: 18px;
+    color: #a8d8ff;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .modal-footer {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .empty-state {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0.25;
+    font-size: 13px;
+    color: var(--text-dim);
+    gap: 8px;
+  }
+
+  .zoom-controls {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    display: flex;
+    gap: 4px;
+  }
+  .zoom-btn {
+    width: 28px; height: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .zoom-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .no-select { pointer-events: none; }
+
+  scrollbar-width: thin;
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">⬡ <span>EmbedUI</span> Designer</div>
+  <div class="topbar-sep"></div>
+  <div class="config-row">
+    <label>MCU:</label>
+    <select id="mcuSelect">
+      <option value="esp8266">ESP8266 / NodeMCU</option>
+      <option value="esp32">ESP32</option>
+      <option value="arduino_uno">Arduino Uno/Nano</option>
+      <option value="arduino_mega">Arduino Mega</option>
+      <option value="rpi_pico">Raspberry Pi Pico</option>
+      <option value="rpi">Raspberry Pi (Linux)</option>
+      <option value="pic">PIC Microcontroller</option>
+      <option value="stm32">STM32 / ARM</option>
+    </select>
+    <label>Library:</label>
+    <select id="libSelect">
+      <option value="adafruit_st7735">Adafruit ST7735/ST7789</option>
+      <option value="tft_espi">TFT_eSPI</option>
+      <option value="u8g2">U8g2 (OLED)</option>
+      <option value="lovyan">LovyanGFX</option>
+      <option value="pygame">PyGame (RPi)</option>
+      <option value="fbdev">Framebuffer (Linux)</option>
+    </select>
+    <label>W:</label>
+    <input type="number" id="dispW" value="160" min="32" max="1920" style="width:55px">
+    <label>H:</label>
+    <input type="number" id="dispH" value="128" min="32" max="1080" style="width:55px">
+    <button class="btn" onclick="applyResolution()">Apply</button>
+    <label>BG:</label>
+    <input type="color" id="bgColor" value="#000000" onchange="redraw()">
+  </div>
+  <div class="topbar-sep"></div>
+  <button class="btn" onclick="clearAll()">Clear</button>
+  <button class="btn" onclick="exportJSON()">💾 Save</button>
+  <label class="btn" style="cursor:pointer">📂 Load<input type="file" accept=".json" onchange="importJSON(event)" style="display:none"></label>
+  <button class="btn primary" onclick="openCodeModal()">⚡ Generate Code</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT: WIDGETS -->
+  <div class="left-panel">
+    <div class="panel-title">Widgets</div>
+    <div class="widget-grid">
+      <div class="widget-btn" draggable="true" ondragstart="startDrag(event,'text')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
+        Label
+      </div>
+      <div class="widget-btn" draggable="true" ondragstart="startDrag(event,'rect')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="1"/></svg>
+        Rectangle
+      </div>
+      <div class="widget-btn" draggable="true" ondragstart="startDrag(event,'circle')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+        Circle
+      </div>
+      <div class="widget-btn" draggable="true" ondragstart="startDrag(event,'line')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="20" x2="20" y2="4"/></svg>
+        Line
+      </div>
+      <div class="widget-btn" draggable="true" ondragstart="startDrag(event,'triangle')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,4 22,20 2,20"/></svg>
+        Triangle
+      </div>
+      <div class="widget-btn" draggable="true" ondragstart="startDrag(event,'button')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="5"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+        Button
+      </div>
+      <div class="widget-btn" draggable="true" ondragstart="startDrag(event,'progress')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="9" width="20" height="6" rx="3"/><rect x="2" y="9" width="12" height="6" rx="3" fill="currentColor"/></svg>
+        Progress
+      </div>
+      <div class="widget-btn" draggable="true" ondragstart="startDrag(event,'icon_battery')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="16" height="10" rx="1"/><path d="M18 10v4"/><rect x="3" y="8" width="9" height="8" fill="currentColor" opacity=".5"/></svg>
+        Battery
+      </div>
+      <div class="widget-btn" draggable="true" ondragstart="startDrag(event,'icon_wifi')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+        WiFi
+      </div>
+      <div class="widget-btn" draggable="true" ondragstart="startDrag(event,'icon_clock')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+        Clock
+      </div>
+      <div class="widget-btn" draggable="true" ondragstart="startDrag(event,'icon_temp')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+        Temp
+      </div>
+      <div class="widget-btn" draggable="true" ondragstart="startDrag(event,'image')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Image
+      </div>
+    </div>
+
+    <div class="panel-title" style="margin-top:6px">Layers</div>
+    <div class="layers-list" id="layersList"></div>
+  </div>
+
+  <!-- CENTER: CANVAS -->
+  <div class="canvas-area" id="canvasArea"
+    ondragover="event.preventDefault()"
+    ondrop="dropWidget(event)">
+    <div id="emptyState" class="empty-state">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      Drag widgets onto the canvas
+    </div>
+    <div class="canvas-wrapper" id="canvasWrapper">
+      <div class="canvas-label" id="canvasLabel">160 × 128 px</div>
+      <canvas id="displayCanvas" width="160" height="128"></canvas>
+    </div>
+    <div class="zoom-controls">
+      <div class="zoom-btn" onclick="zoomOut()">−</div>
+      <div class="zoom-btn" id="zoomLabel" style="width:46px;font-size:11px;font-family:monospace">100%</div>
+      <div class="zoom-btn" onclick="zoomIn()">+</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: PROPERTIES -->
+  <div class="right-panel">
+    <div class="panel-title">Properties</div>
+    <div id="propsPanel">
+      <div style="padding:16px;font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;text-align:center">
+        Select a widget<br>to edit properties
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CODE MODAL -->
+<div class="modal-overlay" id="codeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>⚡ Generated Code</h2>
+      <div class="modal-tabs" id="codeTabs"></div>
+    </div>
+    <div class="modal-body">
+      <pre id="codeOutput"></pre>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="copyCode()">📋 Copy Code</button>
+      <button class="btn primary" onclick="downloadCode()">⬇ Download .ino</button>
+      <button class="btn" onclick="document.getElementById('codeModal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────
+const canvas = document.getElementById('displayCanvas');
+const ctx = canvas.getContext('2d');
+let widgets = [];
+let selected = null;
+let dragType = null;
+let zoom = 2;
+let isDragging = false;
+let dragOffX = 0, dragOffY = 0;
+let isResizing = false;
+let resizeHandle = '';
+let currentCode = {};
+let activeTab = 0;
+
+// ─── ZOOM ─────────────────────────────────────────────────
+function applyZoom() {
+  const w = canvas.width, h = canvas.height;
+  canvas.style.width = (w * zoom) + 'px';
+  canvas.style.height = (h * zoom) + 'px';
+  document.getElementById('zoomLabel').textContent = Math.round(zoom * 100) + '%';
+}
+function zoomIn() { zoom = Math.min(8, zoom + 0.5); applyZoom(); }
+function zoomOut() { zoom = Math.max(0.5, zoom - 0.5); applyZoom(); }
+
+// ─── RESOLUTION ───────────────────────────────────────────
+function applyResolution() {
+  const w = parseInt(document.getElementById('dispW').value);
+  const h = parseInt(document.getElementById('dispH').value);
+  canvas.width = w; canvas.height = h;
+  document.getElementById('canvasLabel').textContent = `${w} × ${h} px`;
+  applyZoom(); redraw();
+}
+
+// ─── DRAG FROM PANEL ──────────────────────────────────────
+function startDrag(e, type) { dragType = type; }
+
+function dropWidget(e) {
+  e.preventDefault();
+  if (!dragType) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.round((e.clientX - rect.left) / zoom);
+  const y = Math.round((e.clientY - rect.top) / zoom);
+  addWidget(dragType, x, y);
+  dragType = null;
+}
+
+// ─── DEFAULT WIDGET CONFIGS ───────────────────────────────
+function defaultWidget(type, x, y) {
+  const base = { id: Date.now(), type, x, y, visible: true };
+  switch(type) {
+    case 'text':      return {...base, text:'Hello!', fontSize:12, color:'#ffffff', bold:false};
+    case 'rect':      return {...base, w:60, h:30, color:'#00d4ff', filled:true, radius:0, borderColor:'#ffffff', borderW:1};
+    case 'circle':    return {...base, r:20, color:'#7c3aed', filled:true, borderColor:'#ffffff', borderW:1};
+    case 'line':      return {...base, x2:x+50, y2:y+30, color:'#10b981', thick:2};
+    case 'triangle':  return {...base, w:40, h:35, color:'#f59e0b', filled:true};
+    case 'button':    return {...base, w:70, h:24, color:'#00d4ff', textColor:'#000000', text:'BTN', fontSize:11, radius:4};
+    case 'progress':  return {...base, w:80, h:12, value:65, color:'#10b981', bgColor:'#334155', radius:3};
+    case 'icon_battery': return {...base, w:28, h:16, level:75, color:'#10b981'};
+    case 'icon_wifi': return {...base, w:24, h:20, bars:3, color:'#00d4ff'};
+    case 'icon_clock': return {...base, r:18, color:'#ffffff', showDigital:false};
+    case 'icon_temp': return {...base, w:14, h:30, value:72, color:'#ef4444', bgColor:'#334155'};
+    case 'image':     return {...base, w:32, h:32, label:'IMG', color:'#334155'};
+  }
+}
+
+function addWidget(type, x, y) {
+  const w = defaultWidget(type, x, y);
+  widgets.push(w);
+  selected = w;
+  redraw(); renderLayers(); renderProps();
+  document.getElementById('emptyState').style.display = 'none';
+}
+
+// ─── DRAW ─────────────────────────────────────────────────
+function redraw() {
+  const bgColor = document.getElementById('bgColor').value;
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (const w of widgets) {
+    if (!w.visible) continue;
+    drawWidget(w);
+  }
+  if (selected) drawSelectionHandles(selected);
+}
+
+function hexToRgb565(hex) { return hex; } // pass-through for canvas
+
+function drawWidget(w) {
+  ctx.save();
+  switch(w.type) {
+    case 'text': drawText(w); break;
+    case 'rect': drawRect(w); break;
+    case 'circle': drawCircle(w); break;
+    case 'line': drawLine(w); break;
+    case 'triangle': drawTriangle(w); break;
+    case 'button': drawButton(w); break;
+    case 'progress': drawProgress(w); break;
+    case 'icon_battery': drawBattery(w); break;
+    case 'icon_wifi': drawWifi(w); break;
+    case 'icon_clock': drawClock(w); break;
+    case 'icon_temp': drawTemp(w); break;
+    case 'image': drawImage(w); break;
+  }
+  ctx.restore();
+}
+
+function drawText(w) {
+  ctx.fillStyle = w.color;
+  ctx.font = `${w.bold?'bold ':''}${w.fontSize}px sans-serif`;
+  ctx.fillText(w.text, w.x, w.y + w.fontSize);
+}
+function drawRect(w) {
+  const r = w.radius || 0;
+  if (w.filled) { ctx.fillStyle = w.color; roundRect(ctx, w.x, w.y, w.w, w.h, r); ctx.fill(); }
+  else { ctx.strokeStyle = w.borderColor; ctx.lineWidth = w.borderW||1; roundRect(ctx, w.x, w.y, w.w, w.h, r); ctx.stroke(); }
+}
+function drawCircle(w) {
+  ctx.beginPath(); ctx.arc(w.x, w.y, w.r, 0, Math.PI*2);
+  if (w.filled) { ctx.fillStyle = w.color; ctx.fill(); }
+  else { ctx.strokeStyle = w.borderColor; ctx.lineWidth = w.borderW||1; ctx.stroke(); }
+}
+function drawLine(w) {
+  ctx.beginPath(); ctx.moveTo(w.x, w.y); ctx.lineTo(w.x2, w.y2);
+  ctx.strokeStyle = w.color; ctx.lineWidth = w.thick||1; ctx.stroke();
+}
+function drawTriangle(w) {
+  ctx.beginPath();
+  ctx.moveTo(w.x + w.w/2, w.y);
+  ctx.lineTo(w.x + w.w, w.y + w.h);
+  ctx.lineTo(w.x, w.y + w.h);
+  ctx.closePath();
+  if (w.filled) { ctx.fillStyle = w.color; ctx.fill(); }
+  else { ctx.strokeStyle = w.color; ctx.stroke(); }
+}
+function drawButton(w) {
+  ctx.fillStyle = w.color;
+  roundRect(ctx, w.x, w.y, w.w, w.h, w.radius||4); ctx.fill();
+  ctx.fillStyle = w.textColor || '#000';
+  ctx.font = `bold ${w.fontSize||11}px sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(w.text, w.x + w.w/2, w.y + w.h/2);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+function drawProgress(w) {
+  ctx.fillStyle = w.bgColor||'#333'; roundRect(ctx, w.x, w.y, w.w, w.h, w.radius||2); ctx.fill();
+  const filled = Math.round((w.value/100) * w.w);
+  ctx.fillStyle = w.color; roundRect(ctx, w.x, w.y, filled, w.h, w.radius||2); ctx.fill();
+}
+function drawBattery(w) {
+  ctx.strokeStyle = w.color; ctx.lineWidth = 1.5;
+  ctx.strokeRect(w.x, w.y, w.w-4, w.h);
+  ctx.fillStyle = w.color;
+  ctx.fillRect(w.x+w.w-4, w.y+Math.floor(w.h*.3), 4, Math.ceil(w.h*.4));
+  const lvl = Math.round(((w.level||75)/100)*(w.w-8));
+  ctx.fillRect(w.x+2, w.y+2, lvl, w.h-4);
+}
+function drawWifi(w) {
+  ctx.strokeStyle = w.color; ctx.lineWidth = 1.5;
+  const cx = w.x + w.w/2, cy = w.y + w.h - 3;
+  const bars = w.bars||3;
+  if (bars >= 1) { ctx.beginPath(); ctx.arc(cx, cy, 3, Math.PI, 0); ctx.stroke(); }
+  if (bars >= 2) { ctx.beginPath(); ctx.arc(cx, cy, 7, Math.PI, 0); ctx.stroke(); }
+  if (bars >= 3) { ctx.beginPath(); ctx.arc(cx, cy, 12, Math.PI, 0); ctx.stroke(); }
+  ctx.fillStyle = w.color; ctx.beginPath(); ctx.arc(cx, cy, 1.5, 0, Math.PI*2); ctx.fill();
+}
+function drawClock(w) {
+  const now = new Date();
+  ctx.strokeStyle = w.color; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(w.x, w.y, w.r, 0, Math.PI*2); ctx.stroke();
+  // hour hand
+  const h = (now.getHours()%12)/12 * Math.PI*2 - Math.PI/2;
+  ctx.beginPath(); ctx.moveTo(w.x, w.y);
+  ctx.lineTo(w.x + Math.cos(h)*w.r*.6, w.y + Math.sin(h)*w.r*.6);
+  ctx.lineWidth = 2; ctx.stroke();
+  // minute hand
+  const m = now.getMinutes()/60 * Math.PI*2 - Math.PI/2;
+  ctx.beginPath(); ctx.moveTo(w.x, w.y);
+  ctx.lineTo(w.x + Math.cos(m)*w.r*.85, w.y + Math.sin(m)*w.r*.85);
+  ctx.lineWidth = 1; ctx.stroke();
+}
+function drawTemp(w) {
+  const r = Math.floor(w.w/2);
+  ctx.strokeStyle = w.color; ctx.lineWidth = 1.5;
+  // tube
+  ctx.strokeRect(w.x+2, w.y, w.w-4, w.h-r);
+  // bulb
+  ctx.beginPath(); ctx.arc(w.x+w.w/2, w.y+w.h-r, r, 0, Math.PI*2); ctx.stroke();
+  // fill
+  const pct = (w.value||72)/100;
+  const fillH = Math.round((w.h-r)*pct);
+  ctx.fillStyle = w.color;
+  ctx.fillRect(w.x+3, w.y+w.h-r-fillH, w.w-6, fillH);
+  ctx.beginPath(); ctx.arc(w.x+w.w/2, w.y+w.h-r, r-1, 0, Math.PI*2); ctx.fill();
+}
+function drawImage(w) {
+  ctx.fillStyle = w.color||'#334155';
+  ctx.fillRect(w.x, w.y, w.w, w.h);
+  ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1;
+  ctx.strokeRect(w.x, w.y, w.w, w.h);
+  ctx.strokeStyle = '#64748b';
+  ctx.beginPath(); ctx.moveTo(w.x, w.y); ctx.lineTo(w.x+w.w, w.y+w.h); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(w.x+w.w, w.y); ctx.lineTo(w.x, w.y+w.h); ctx.stroke();
+  ctx.fillStyle = '#94a3b8'; ctx.font = '9px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(w.label||'IMG', w.x+w.w/2, w.y+w.h/2);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
+  ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+  ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
+  ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
+  ctx.closePath();
+}
+
+// ─── SELECTION HANDLES ────────────────────────────────────
+function getBounds(w) {
+  switch(w.type) {
+    case 'circle': case 'icon_clock': return {x:w.x-w.r, y:w.y-w.r, w:w.r*2, h:w.r*2};
+    case 'line': return {x:Math.min(w.x,w.x2), y:Math.min(w.y,w.y2), w:Math.abs(w.x2-w.x)||10, h:Math.abs(w.y2-w.y)||10};
+    case 'text': return {x:w.x, y:w.y, w:w.text.length*(w.fontSize*.6), h:w.fontSize+4};
+    default: return {x:w.x, y:w.y, w:w.w||40, h:w.h||20};
+  }
+}
+
+function drawSelectionHandles(w) {
+  const b = getBounds(w);
+  ctx.save();
+  ctx.setLineDash([3,3]);
+  ctx.strokeStyle = '#00d4ff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(b.x-2, b.y-2, b.w+4, b.h+4);
+  ctx.setLineDash([]);
+  const handles = [
+    [b.x-2, b.y-2], [b.x+b.w/2, b.y-2], [b.x+b.w+2, b.y-2],
+    [b.x-2, b.y+b.h/2], [b.x+b.w+2, b.y+b.h/2],
+    [b.x-2, b.y+b.h+2], [b.x+b.w/2, b.y+b.h+2], [b.x+b.w+2, b.y+b.h+2]
+  ];
+  for (const [hx,hy] of handles) {
+    ctx.fillStyle = '#00d4ff'; ctx.fillRect(hx-3, hy-3, 6, 6);
+  }
+  ctx.restore();
+}
+
+// ─── MOUSE EVENTS ─────────────────────────────────────────
+canvas.addEventListener('mousedown', e => {
+  const {mx, my} = getMousePos(e);
+  // find widget under cursor (top-most first)
+  let found = null;
+  for (let i = widgets.length-1; i >= 0; i--) {
+    if (hitTest(widgets[i], mx, my)) { found = widgets[i]; break; }
+  }
+  selected = found;
+  if (found) {
+    isDragging = true;
+    const b = getBounds(found);
+    dragOffX = mx - b.x;
+    dragOffY = my - b.y;
+  }
+  redraw(); renderLayers(); renderProps();
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!isDragging || !selected) return;
+  const {mx, my} = getMousePos(e);
+  const b = getBounds(selected);
+  const nx = mx - dragOffX;
+  const ny = my - dragOffY;
+  // Move widget
+  const dx = nx - b.x, dy = ny - b.y;
+  if (selected.type === 'circle' || selected.type === 'icon_clock') {
+    selected.x += dx; selected.y += dy;
+  } else if (selected.type === 'line') {
+    const ldx = nx - selected.x, ldy = ny - selected.y;
+    selected.x = nx; selected.y = ny;
+    selected.x2 += ldx; selected.y2 += ldy;
+  } else {
+    selected.x += dx; selected.y += dy;
+  }
+  redraw();
+});
+
+canvas.addEventListener('mouseup', () => { isDragging = false; });
+canvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+function getMousePos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    mx: Math.round((e.clientX - rect.left) / zoom),
+    my: Math.round((e.clientY - rect.top) / zoom)
+  };
+}
+
+function hitTest(w, mx, my) {
+  const b = getBounds(w);
+  return mx >= b.x-4 && mx <= b.x+b.w+4 && my >= b.y-4 && my <= b.y+b.h+4;
+}
+
+// Delete key
+document.addEventListener('keydown', e => {
+  if ((e.key === 'Delete' || e.key === 'Backspace') && selected && document.activeElement === document.body) {
+    widgets = widgets.filter(w => w !== selected);
+    selected = null;
+    redraw(); renderLayers(); renderProps();
+  }
+});
+
+// ─── LAYERS ───────────────────────────────────────────────
+const typeColors = {
+  text:'#00d4ff', rect:'#7c3aed', circle:'#10b981', line:'#f59e0b',
+  triangle:'#ef4444', button:'#0ea5e9', progress:'#10b981',
+  icon_battery:'#10b981', icon_wifi:'#00d4ff', icon_clock:'#a78bfa', icon_temp:'#ef4444', image:'#64748b'
+};
+const typeNames = {
+  text:'Text', rect:'Rect', circle:'Circle', line:'Line',
+  triangle:'Triangle', button:'Button', progress:'Progress',
+  icon_battery:'Battery', icon_wifi:'WiFi', icon_clock:'Clock', icon_temp:'Temp', image:'Image'
+};
+
+function renderLayers() {
+  const el = document.getElementById('layersList');
+  el.innerHTML = '';
+  for (let i = widgets.length-1; i >= 0; i--) {
+    const w = widgets[i];
+    const d = document.createElement('div');
+    d.className = 'layer-item' + (w === selected ? ' selected' : '');
+    d.innerHTML = `<div class="layer-dot" style="background:${typeColors[w.type]||'#fff'}"></div>
+      <span>${typeNames[w.type]} ${i+1}</span>
+      <span class="layer-del" onclick="deleteWidget(${w.id})">✕</span>`;
+    d.onclick = (e) => { if (!e.target.classList.contains('layer-del')) { selected = w; redraw(); renderLayers(); renderProps(); } };
+    el.appendChild(d);
+  }
+}
+
+function deleteWidget(id) {
+  widgets = widgets.filter(w => w.id !== id);
+  if (selected && selected.id === id) selected = null;
+  redraw(); renderLayers(); renderProps();
+}
+
+// ─── PROPERTIES PANEL ─────────────────────────────────────
+function renderProps() {
+  const panel = document.getElementById('propsPanel');
+  if (!selected) {
+    panel.innerHTML = '<div style="padding:16px;font-size:11px;color:var(--text-muted);font-family:\'JetBrains Mono\',monospace;text-align:center">Select a widget<br>to edit properties</div>';
+    return;
+  }
+  const w = selected;
+  let html = `<div class="props-section"><div class="props-label">${typeNames[w.type]||w.type}</div>`;
+
+  const row = (label, input) => `<div class="prop-row"><label>${label}</label>${input}</div>`;
+  const num = (key, label, min, max) => row(label, `<input type="number" min="${min}" max="${max}" value="${w[key]||0}" onchange="updateProp('${key}',+this.value)">`);
+  const col = (key, label) => row(label, `<input type="color" value="${w[key]||'#ffffff'}" onchange="updateProp('${key}',this.value)">`);
+  const txt = (key, label) => row(label, `<input type="text" value="${w[key]||''}" oninput="updateProp('${key}',this.value)">`);
+  const chk = (key, label) => row(label, `<input type="checkbox" ${w[key]?'checked':''} onchange="updateProp('${key}',this.checked)" style="width:auto;flex:none">`);
+  const rng = (key, label, min, max) => row(label, `<input type="range" min="${min}" max="${max}" value="${w[key]||0}" oninput="updateProp('${key}',+this.value);this.previousElementSibling?.remove()"> `);
+
+  // Position (all)
+  html += num('x','X',0,9999) + num('y','Y',0,9999);
+
+  switch(w.type) {
+    case 'text':
+      html += txt('text','Text') + num('fontSize','Size',4,64) + col('color','Color') + chk('bold','Bold');
+      break;
+    case 'rect':
+      html += num('w','Width',1,999) + num('h','Height',1,999) + num('radius','Radius',0,50) + col('color','Color') + chk('filled','Filled') + col('borderColor','Border') + num('borderW','BorderW',1,10);
+      break;
+    case 'circle':
+      html += num('r','Radius',1,200) + col('color','Color') + chk('filled','Filled') + col('borderColor','Border') + num('borderW','BorderW',1,10);
+      break;
+    case 'line':
+      html += num('x2','X2',0,9999) + num('y2','Y2',0,9999) + col('color','Color') + num('thick','Thick',1,20);
+      break;
+    case 'triangle':
+      html += num('w','Width',1,999) + num('h','Height',1,999) + col('color','Color') + chk('filled','Filled');
+      break;
+    case 'button':
+      html += num('w','Width',1,999) + num('h','Height',1,999) + txt('text','Label') + num('fontSize','FontSz',4,32) + col('color','BG') + col('textColor','Text') + num('radius','Radius',0,30);
+      break;
+    case 'progress':
+      html += num('w','Width',1,999) + num('h','Height',1,20) + row('Value', `<input type="range" min="0" max="100" value="${w.value}" oninput="updateProp('value',+this.value)">`) + col('color','Bar') + col('bgColor','Track') + num('radius','Radius',0,10);
+      break;
+    case 'icon_battery':
+      html += num('w','Width',10,60) + num('h','Height',6,30) + row('Level%', `<input type="range" min="0" max="100" value="${w.level}" oninput="updateProp('level',+this.value)">`) + col('color','Color');
+      break;
+    case 'icon_wifi':
+      html += row('Bars', `<select onchange="updateProp('bars',+this.value)"><option ${w.bars==1?'selected':''} value="1">1</option><option ${w.bars==2?'selected':''} value="2">2</option><option ${w.bars==3?'selected':''} value="3">3 (Full)</option></select>`) + col('color','Color');
+      break;
+    case 'icon_clock':
+      html += num('r','Radius',6,60) + col('color','Color');
+      break;
+    case 'icon_temp':
+      html += num('w','Width',8,30) + num('h','Height',20,80) + row('Value%', `<input type="range" min="0" max="100" value="${w.value}" oninput="updateProp('value',+this.value)">`) + col('color','Fill') + col('bgColor','Tube');
+      break;
+    case 'image':
+      html += num('w','Width',8,200) + num('h','Height',8,200) + txt('label','Label') + col('color','BG');
+      break;
+  }
+
+  html += `</div><div class="props-section">
+    <button class="btn danger" style="width:100%;font-size:11px" onclick="deleteWidget(${w.id})">🗑 Delete Widget</button>
+  </div>`;
+  panel.innerHTML = html;
+}
+
+function updateProp(key, val) {
+  if (!selected) return;
+  selected[key] = val;
+  redraw(); renderLayers();
+}
+
+// ─── CLEAR ────────────────────────────────────────────────
+function clearAll() {
+  if (!confirm('Clear all widgets?')) return;
+  widgets = []; selected = null;
+  redraw(); renderLayers(); renderProps();
+  document.getElementById('emptyState').style.display = '';
+}
+
+// ─── SAVE / LOAD ──────────────────────────────────────────
+function exportJSON() {
+  const data = JSON.stringify({
+    display: { w: canvas.width, h: canvas.height, bg: document.getElementById('bgColor').value },
+    mcu: document.getElementById('mcuSelect').value,
+    lib: document.getElementById('libSelect').value,
+    widgets
+  }, null, 2);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], {type:'application/json'}));
+  a.download = 'embedui-project.json';
+  a.click();
+}
+
+function importJSON(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (d.display) {
+        canvas.width = d.display.w; canvas.height = d.display.h;
+        document.getElementById('dispW').value = d.display.w;
+        document.getElementById('dispH').value = d.display.h;
+        document.getElementById('bgColor').value = d.display.bg||'#000000';
+        document.getElementById('canvasLabel').textContent = `${d.display.w} × ${d.display.h} px`;
+      }
+      if (d.mcu) document.getElementById('mcuSelect').value = d.mcu;
+      if (d.lib) document.getElementById('libSelect').value = d.lib;
+      widgets = d.widgets||[];
+      selected = null;
+      applyZoom(); redraw(); renderLayers(); renderProps();
+      document.getElementById('emptyState').style.display = widgets.length ? 'none' : '';
+    } catch { alert('Invalid project file!'); }
+  };
+  r.readAsText(file);
+}
+
+// ─── CODE GENERATION ──────────────────────────────────────
+function openCodeModal() {
+  const lib = document.getElementById('libSelect').value;
+  const mcu = document.getElementById('mcuSelect').value;
+  currentCode = {};
+  currentCode['Main'] = generateMain(lib, mcu);
+  currentCode['Init'] = generateInit(lib, mcu);
+  currentCode['Draw'] = generateDraw(lib);
+  if (lib === 'tft_espi' || lib === 'adafruit_st7735') currentCode['README'] = generateReadme(lib, mcu);
+
+  const tabs = document.getElementById('codeTabs');
+  tabs.innerHTML = '';
+  activeTab = 0;
+  Object.keys(currentCode).forEach((name, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i===0?' active':'');
+    btn.textContent = name;
+    btn.onclick = () => {
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      activeTab = i;
+      document.getElementById('codeOutput').textContent = Object.values(currentCode)[i];
+    };
+    tabs.appendChild(btn);
+  });
+  document.getElementById('codeOutput').textContent = Object.values(currentCode)[0];
+  document.getElementById('codeModal').classList.add('open');
+}
+
+function rgb565(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  const val = ((r & 0xF8)<<8) | ((g & 0xFC)<<3) | (b>>3);
+  return `0x${val.toString(16).toUpperCase().padStart(4,'0')}`;
+}
+
+function colorConst(hex, lib) {
+  if (lib === 'u8g2') return '1'; // monochrome
+  return rgb565(hex);
+}
+
+function generateDraw(lib) {
+  const bg = document.getElementById('bgColor').value;
+  const W = canvas.width, H = canvas.height;
+  let lines = [];
+
+  if (lib === 'adafruit_st7735') {
+    lines.push('// ─── Draw all UI elements ───');
+    lines.push(`tft.fillScreen(${rgb565(bg)});`);
+    lines.push('');
+    for (const w of widgets) lines.push(...genWidgetAdafruit(w));
+  } else if (lib === 'tft_espi') {
+    lines.push('// ─── Draw all UI elements ───');
+    lines.push(`tft.fillScreen(${rgb565(bg)});`);
+    lines.push('');
+    for (const w of widgets) lines.push(...genWidgetTFTeSPI(w));
+  } else if (lib === 'u8g2') {
+    lines.push('// ─── Draw all UI elements (U8g2 monochrome) ───');
+    lines.push('u8g2.clearBuffer();');
+    lines.push('');
+    for (const w of widgets) lines.push(...genWidgetU8g2(w));
+    lines.push('u8g2.sendBuffer();');
+  } else if (lib === 'lovyan') {
+    lines.push('// ─── Draw all UI elements (LovyanGFX) ───');
+    lines.push(`lcd.fillScreen(${rgb565(bg)});`);
+    lines.push('');
+    for (const w of widgets) lines.push(...genWidgetLovyan(w));
+  } else if (lib === 'pygame') {
+    lines.push('# ─── Draw all UI elements (PyGame) ───');
+    lines.push(`screen.fill(${hexToPyColor(bg)})`);
+    lines.push('');
+    for (const w of widgets) lines.push(...genWidgetPyGame(w));
+    lines.push('pygame.display.flip()');
+  } else {
+    lines.push(`// Library: ${lib}`);
+    for (const w of widgets) lines.push(`// ${typeNames[w.type]} at (${w.x},${w.y})`);
+  }
+  return lines.join('\n');
+}
+
+function hexToPyColor(hex) {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `(${r}, ${g}, ${b})`;
+}
+
+function genWidgetAdafruit(w) {
+  const lines = [`// --- ${typeNames[w.type]} ---`];
+  switch(w.type) {
+    case 'text':
+      lines.push(`tft.setTextColor(${rgb565(w.color)});`);
+      lines.push(`tft.setTextSize(${Math.max(1,Math.round(w.fontSize/8))});`);
+      lines.push(`tft.setCursor(${w.x}, ${w.y});`);
+      lines.push(`tft.print("${w.text}");`);
+      break;
+    case 'rect':
+      if (w.filled) lines.push(`tft.fillRect(${w.x}, ${w.y}, ${w.w}, ${w.h}, ${rgb565(w.color)});`);
+      else lines.push(`tft.drawRect(${w.x}, ${w.y}, ${w.w}, ${w.h}, ${rgb565(w.borderColor||w.color)});`);
+      break;
+    case 'circle':
+      if (w.filled) lines.push(`tft.fillCircle(${w.x}, ${w.y}, ${w.r}, ${rgb565(w.color)});`);
+      else lines.push(`tft.drawCircle(${w.x}, ${w.y}, ${w.r}, ${rgb565(w.borderColor||w.color)});`);
+      break;
+    case 'line':
+      lines.push(`tft.drawLine(${w.x}, ${w.y}, ${w.x2}, ${w.y2}, ${rgb565(w.color)});`);
+      break;
+    case 'triangle':
+      if (w.filled) lines.push(`tft.fillTriangle(${w.x+Math.round(w.w/2)}, ${w.y}, ${w.x+w.w}, ${w.y+w.h}, ${w.x}, ${w.y+w.h}, ${rgb565(w.color)});`);
+      else lines.push(`tft.drawTriangle(${w.x+Math.round(w.w/2)}, ${w.y}, ${w.x+w.w}, ${w.y+w.h}, ${w.x}, ${w.y+w.h}, ${rgb565(w.color)});`);
+      break;
+    case 'button':
+      lines.push(`tft.fillRoundRect(${w.x}, ${w.y}, ${w.w}, ${w.h}, ${w.radius||4}, ${rgb565(w.color)});`);
+      lines.push(`tft.setTextColor(${rgb565(w.textColor||'#000000')});`);
+      lines.push(`tft.setTextSize(1);`);
+      lines.push(`tft.setCursor(${w.x+4}, ${w.y+Math.round(w.h/2)-4});`);
+      lines.push(`tft.print("${w.text}");`);
+      break;
+    case 'progress':
+      lines.push(`tft.fillRoundRect(${w.x}, ${w.y}, ${w.w}, ${w.h}, ${w.radius||2}, ${rgb565(w.bgColor||'#334155')});`);
+      lines.push(`tft.fillRoundRect(${w.x}, ${w.y}, ${Math.round((w.value/100)*w.w)}, ${w.h}, ${w.radius||2}, ${rgb565(w.color)});`);
+      break;
+    case 'icon_battery':
+      lines.push(`// Battery icon (${w.level}%)`);
+      lines.push(`tft.drawRect(${w.x}, ${w.y}, ${w.w-4}, ${w.h}, ${rgb565(w.color)});`);
+      lines.push(`tft.fillRect(${w.x+w.w-4}, ${w.y+Math.floor(w.h*.3)}, 4, ${Math.ceil(w.h*.4)}, ${rgb565(w.color)});`);
+      lines.push(`tft.fillRect(${w.x+2}, ${w.y+2}, ${Math.round((w.level/100)*(w.w-8))}, ${w.h-4}, ${rgb565(w.color)});`);
+      break;
+    case 'icon_wifi':
+      lines.push(`// WiFi icon (${w.bars} bars)`);
+      lines.push(`tft.drawCircle(${w.x+Math.round(w.w/2)}, ${w.y+w.h}, 3, ${rgb565(w.color)});`);
+      if (w.bars>=2) lines.push(`tft.drawCircle(${w.x+Math.round(w.w/2)}, ${w.y+w.h}, 7, ${rgb565(w.color)});`);
+      if (w.bars>=3) lines.push(`tft.drawCircle(${w.x+Math.round(w.w/2)}, ${w.y+w.h}, 12, ${rgb565(w.color)});`);
+      lines.push(`tft.fillCircle(${w.x+Math.round(w.w/2)}, ${w.y+w.h}, 2, ${rgb565(w.color)});`);
+      break;
+    case 'icon_clock':
+      lines.push(`tft.drawCircle(${w.x}, ${w.y}, ${w.r}, ${rgb565(w.color)});`);
+      lines.push(`// Draw hands with: tft.drawLine(x, y, x+cos*r, y+sin*r, color);`);
+      break;
+    case 'icon_temp':
+      lines.push(`// Thermometer icon`);
+      lines.push(`tft.drawRect(${w.x+2}, ${w.y}, ${w.w-4}, ${w.h - Math.floor(w.w/2)}, ${rgb565(w.color)});`);
+      lines.push(`tft.fillCircle(${w.x+Math.round(w.w/2)}, ${w.y+w.h - Math.floor(w.w/2)}, ${Math.floor(w.w/2)}, ${rgb565(w.color)});`);
+      break;
+    case 'image':
+      lines.push(`// Place your bitmap here: tft.drawBitmap(${w.x}, ${w.y}, yourBitmapData, ${w.w}, ${w.h}, ${rgb565(w.color)});`);
+      lines.push(`// Use: https://javl.github.io/image2cpp/ to convert images to C arrays`);
+      break;
+  }
+  lines.push('');
+  return lines;
+}
+
+function genWidgetTFTeSPI(w) {
+  // TFT_eSPI is almost identical to Adafruit but uses tft.setTextDatum, etc.
+  const adaLines = genWidgetAdafruit(w);
+  return adaLines.map(l => l); // same API for basic drawing
+}
+
+function genWidgetU8g2(w) {
+  const lines = [`// --- ${typeNames[w.type]} (U8g2) ---`];
+  switch(w.type) {
+    case 'text':
+      lines.push(`u8g2.setFont(u8g2_font_ncenB0${Math.max(8,Math.min(14,w.fontSize))}_tr);`);
+      lines.push(`u8g2.drawStr(${w.x}, ${w.y+w.fontSize}, "${w.text}");`);
+      break;
+    case 'rect':
+      if (w.filled) lines.push(`u8g2.drawBox(${w.x}, ${w.y}, ${w.w}, ${w.h});`);
+      else lines.push(`u8g2.drawFrame(${w.x}, ${w.y}, ${w.w}, ${w.h});`);
+      break;
+    case 'circle':
+      if (w.filled) lines.push(`u8g2.drawDisc(${w.x}, ${w.y}, ${w.r});`);
+      else lines.push(`u8g2.drawCircle(${w.x}, ${w.y}, ${w.r});`);
+      break;
+    case 'line':
+      lines.push(`u8g2.drawLine(${w.x}, ${w.y}, ${w.x2}, ${w.y2});`);
+      break;
+    case 'triangle':
+      lines.push(`u8g2.drawTriangle(${w.x+Math.round(w.w/2)},${w.y}, ${w.x+w.w},${w.y+w.h}, ${w.x},${w.y+w.h});`);
+      break;
+    case 'button':
+      lines.push(`u8g2.drawRBox(${w.x}, ${w.y}, ${w.w}, ${w.h}, ${w.radius||3});`);
+      lines.push(`u8g2.setDrawColor(0);`);
+      lines.push(`u8g2.drawStr(${w.x+4}, ${w.y+Math.round(w.h*.7)}, "${w.text}");`);
+      lines.push(`u8g2.setDrawColor(1);`);
+      break;
+    case 'progress':
+      lines.push(`u8g2.drawRFrame(${w.x}, ${w.y}, ${w.w}, ${w.h}, ${w.radius||2});`);
+      lines.push(`u8g2.drawBox(${w.x+1}, ${w.y+1}, ${Math.round((w.value/100)*(w.w-2))}, ${w.h-2});`);
+      break;
+    default:
+      lines.push(`// ${typeNames[w.type]} at (${w.x},${w.y})`);
+  }
+  lines.push('');
+  return lines;
+}
+
+function genWidgetLovyan(w) {
+  // LovyanGFX has same API but uses lcd. prefix
+  return genWidgetAdafruit(w).map(l => l.replace(/^tft\./,'lcd.'));
+}
+
+function genWidgetPyGame(w) {
+  const lines = [`# --- ${typeNames[w.type]} ---`];
+  const c = hexToPyColor(w.color||'#ffffff');
+  switch(w.type) {
+    case 'text':
+      lines.push(`font = pygame.font.SysFont(None, ${w.fontSize*2})`);
+      lines.push(`surf = font.render("${w.text}", True, ${c})`);
+      lines.push(`screen.blit(surf, (${w.x}, ${w.y}))`);
+      break;
+    case 'rect':
+      if (w.filled) lines.push(`pygame.draw.rect(screen, ${c}, (${w.x}, ${w.y}, ${w.w}, ${w.h}))`);
+      else lines.push(`pygame.draw.rect(screen, ${c}, (${w.x}, ${w.y}, ${w.w}, ${w.h}), ${w.borderW||1})`);
+      break;
+    case 'circle':
+      if (w.filled) lines.push(`pygame.draw.circle(screen, ${c}, (${w.x}, ${w.y}), ${w.r})`);
+      else lines.push(`pygame.draw.circle(screen, ${c}, (${w.x}, ${w.y}), ${w.r}, ${w.borderW||1})`);
+      break;
+    case 'line':
+      lines.push(`pygame.draw.line(screen, ${c}, (${w.x}, ${w.y}), (${w.x2}, ${w.y2}), ${w.thick||1})`);
+      break;
+    case 'progress':
+      lines.push(`pygame.draw.rect(screen, ${hexToPyColor(w.bgColor||'#334155')}, (${w.x}, ${w.y}, ${w.w}, ${w.h}))`);
+      lines.push(`pygame.draw.rect(screen, ${c}, (${w.x}, ${w.y}, ${Math.round((w.value/100)*w.w)}, ${w.h}))`);
+      break;
+    default:
+      lines.push(`# ${typeNames[w.type]} at (${w.x}, ${w.y})`);
+  }
+  lines.push('');
+  return lines;
+}
+
+function generateInit(lib, mcu) {
+  const W = canvas.width, H = canvas.height;
+  if (lib === 'adafruit_st7735') return `#include <Adafruit_GFX.h>
+#include <Adafruit_ST7735.h>
+#include <SPI.h>
+
+#define TFT_CS   10
+#define TFT_RST   9
+#define TFT_DC    8
+
+Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+
+void setup() {
+  tft.initR(INITR_BLACKTAB);   // or INITR_144GREENTAB for 128x128
+  tft.setRotation(1);           // 0=portrait, 1=landscape
+  tft.fillScreen(ST77XX_BLACK);
+  drawUI();
+}`;
+  if (lib === 'tft_espi') return `#include <TFT_eSPI.h>
+
+TFT_eSPI tft = TFT_eSPI();
+
+void setup() {
+  tft.init();
+  tft.setRotation(1);
+  tft.fillScreen(TFT_BLACK);
+  drawUI();
+}
+
+// ⚠️ Configure User_Setup.h in TFT_eSPI library:
+// #define ST7735_DRIVER
+// #define TFT_WIDTH  ${W}
+// #define TFT_HEIGHT ${H}`;
+  if (lib === 'u8g2') return `#include <U8g2lib.h>
+#include <Wire.h>
+
+// Choose your display constructor:
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
+// U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
+
+void setup() {
+  u8g2.begin();
+  drawUI();
+}`;
+  if (lib === 'lovyan') return `#define LGFX_USE_V1
+#include <LovyanGFX.hpp>
+
+class LGFX : public lgfx::LGFX_Device {
+  lgfx::Panel_ST7735S _panel;
+  lgfx::Bus_SPI _bus;
+public:
+  LGFX() {
+    auto cfg = _bus.config();
+    cfg.spi_host = VSPI_HOST;
+    cfg.freq_write = 27000000;
+    cfg.pin_sclk = 18; cfg.pin_mosi = 23;
+    cfg.pin_dc = 2;
+    _bus.config(cfg); _panel.setBus(&_bus);
+    auto pcfg = _panel.config();
+    pcfg.pin_cs = 5; pcfg.pin_rst = 4;
+    pcfg.panel_width = ${W}; pcfg.panel_height = ${H};
+    _panel.config(pcfg);
+    setPanel(&_panel);
+  }
+};
+
+LGFX lcd;
+
+void setup() {
+  lcd.init();
+  lcd.setRotation(1);
+  lcd.fillScreen(TFT_BLACK);
+  drawUI();
+}`;
+  if (lib === 'pygame') return `import pygame
+import sys
+
+pygame.init()
+screen = pygame.display.set_mode((${W}, ${H}))
+pygame.display.set_caption("EmbedUI Display")
+clock = pygame.time.Clock()
+
+def draw_ui():
+    pass  # Generated draw code goes here
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit(); sys.exit()
+    draw_ui()
+    pygame.display.flip()
+    clock.tick(60)`;
+  return `// Init code for ${lib} on ${mcu}`;
+}
+
+function generateMain(lib, mcu) {
+  const isArduino = !['pygame','fbdev'].includes(lib);
+  if (!isArduino) return generateInit(lib, mcu) + '\n\n' + generateDraw(lib);
+  return `/*
+ * ╔═══════════════════════════════════╗
+ * ║   EmbedUI Designer — Generated   ║
+ * ║   MCU: ${document.getElementById('mcuSelect').options[document.getElementById('mcuSelect').selectedIndex].text.padEnd(28)}║
+ * ║   Lib: ${document.getElementById('libSelect').options[document.getElementById('libSelect').selectedIndex].text.padEnd(28)}║
+ * ╚═══════════════════════════════════╝
+ * 
+ * Generated by EmbedUI Designer
+ * Display: ${canvas.width}x${canvas.height}
+ */
+
+${generateInit(lib, mcu)}
+
+void drawUI() {
+${generateDraw(lib).split('\n').map(l=>'  '+l).join('\n')}
+}
+
+void loop() {
+  // drawUI(); // call when display needs updating
+}`;
+}
+
+function generateReadme(lib, mcu) {
+  return `# EmbedUI Generated Project
+
+## Display: ${canvas.width} × ${canvas.height} px
+## MCU: ${document.getElementById('mcuSelect').options[document.getElementById('mcuSelect').selectedIndex].text}
+## Library: ${document.getElementById('libSelect').options[document.getElementById('libSelect').selectedIndex].text}
+
+## Required Libraries (Install via Arduino Library Manager):
+${lib === 'adafruit_st7735' ? '- Adafruit ST7735 and ST7789 Library\n- Adafruit GFX Library' : ''}
+${lib === 'tft_espi' ? '- TFT_eSPI by Bodmer\n- (Configure User_Setup.h in library folder)' : ''}
+
+## Wiring (SPI):
+| Display | ${mcu === 'esp8266' ? 'NodeMCU' : 'ESP32'} |
+|---------|--------|
+| VCC     | 3.3V   |
+| GND     | GND    |
+| SCL/CLK | ${mcu === 'esp8266' ? 'D5 (GPIO14)' : 'GPIO18'} |
+| SDA/MOSI| ${mcu === 'esp8266' ? 'D7 (GPIO13)' : 'GPIO23'} |
+| RES/RST | ${mcu === 'esp8266' ? 'D3 (GPIO0)' : 'GPIO4'}  |
+| DC/RS   | ${mcu === 'esp8266' ? 'D4 (GPIO2)' : 'GPIO2'}  |
+| CS      | ${mcu === 'esp8266' ? 'D8 (GPIO15)' : 'GPIO5'}  |
+| BL      | 3.3V or PWM pin |
+
+## Bitmap Images:
+For image widgets, convert your images at:
+→ https://javl.github.io/image2cpp/
+Set: Arduino output, 1-bit or 16-bit color
+
+## Color Format:
+Colors are in RGB565 format (16-bit).
+Use the helper: uint16_t c = ((r & 0xF8)<<8)|((g & 0xFC)<<3)|(b>>3);
+`;
+}
+
+function copyCode() {
+  const text = document.getElementById('codeOutput').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.modal-footer .btn');
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = '📋 Copy Code', 1500);
+  });
+}
+
+function downloadCode() {
+  const lib = document.getElementById('libSelect').value;
+  const ext = lib === 'pygame' ? '.py' : '.ino';
+  const code = Object.values(currentCode)[0];
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([code], {type:'text/plain'}));
+  a.download = `embedui_project${ext}`;
+  a.click();
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+applyZoom();
+redraw();
+</script>
+</body>
+</html>
